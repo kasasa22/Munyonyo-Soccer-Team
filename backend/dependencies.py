@@ -14,7 +14,7 @@ def get_current_user(
 ) -> User:
     """Get current authenticated user from session"""
     
-    # Try to get session_id from cookie first, then from Authorization header
+    
     if not session_id:
         # Check if session_id is in Authorization header (for API clients)
         auth_header = request.headers.get("Authorization")

@@ -1,0 +1,140 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: football_manager_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: football_manager
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - football_manager_network
+    # Add resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+    # Add health check
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d football_manager"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # pgAdmin
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: football_manager_pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgladmin
+    networks:
+      - football_manager_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Add resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+    # Add health check
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/misc/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # FastAPI Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: football_manager_backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres123@postgres:5432/football_manager
+      CORS_ORIGINS: http://srv887319.hstgr.cloud:3000
+    volumes:
+      - ./backend:/app
+      - /app/__pycache__
+    networks:
+      - football_manager_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Add resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+    # Add health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/docs"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    # Add graceful shutdown timeout
+    stop_grace_period: 30s
+
+  # Next.js Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: football_manager_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://srv887319.hstgr.cloud:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    networks:
+      - football_manager_network
+    depends_on:
+      backend:
+        condition: service_healthy
+    # Add resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+    # Add health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    # Add graceful shutdown timeout
+    stop_grace_period: 30s
+
+volumes:
+  postgres_data:
+
+networks:
+  football_manager_network:
+    driver: bridge

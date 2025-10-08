@@ -9,6 +9,10 @@
     "lint": "next lint",
     "firebase:init": "ts-node scripts/init-firebase.ts"
   },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
     "@radix-ui/react-accordion": "1.2.2",
@@ -44,7 +48,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "1.0.4",
-    "date-fns": "4.1.0",
+    "date-fns": "^3.6.0",
     "dotenv": "^17.2.3",
     "embla-carousel-react": "8.5.1",
     "firebase": "^12.3.0",

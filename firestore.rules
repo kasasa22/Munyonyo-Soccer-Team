@@ -1,0 +1,81 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to get user data
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return isAuthenticated() && getUserData().role == 'admin';
+    }
+
+    // Helper function to check if user is active
+    function isActive() {
+      return isAuthenticated() && getUserData().status == 'active';
+    }
+
+    // Users collection
+    match /users/{userId} {
+      // Anyone authenticated can read users (for lookups)
+      allow read: if isAuthenticated() && isActive();
+
+      // Only admins can create users
+      allow create: if isAdmin();
+
+      // Users can update their own profile, admins can update any
+      allow update: if isActive() && (request.auth.uid == userId || isAdmin());
+
+      // Only admins can delete users
+      allow delete: if isAdmin();
+    }
+
+    // Players collection
+    match /players/{playerId} {
+      // All authenticated users can read players
+      allow read: if isAuthenticated() && isActive();
+
+      // All authenticated users can create/update/delete players
+      allow create, update, delete: if isAuthenticated() && isActive();
+    }
+
+    // Payments collection
+    match /payments/{paymentId} {
+      // All authenticated users can read payments
+      allow read: if isAuthenticated() && isActive();
+
+      // All authenticated users can create/update/delete payments
+      allow create, update, delete: if isAuthenticated() && isActive();
+    }
+
+    // Match Days collection
+    match /match_days/{matchDayId} {
+      // All authenticated users can read match days
+      allow read: if isAuthenticated() && isActive();
+
+      // All authenticated users can create/update/delete match days
+      allow create, update, delete: if isAuthenticated() && isActive();
+    }
+
+    // Expenses collection
+    match /expenses/{expenseId} {
+      // All authenticated users can read expenses
+      allow read: if isAuthenticated() && isActive();
+
+      // All authenticated users can create/update/delete expenses
+      allow create, update, delete: if isAuthenticated() && isActive();
+    }
+
+    // Deny access to all other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
